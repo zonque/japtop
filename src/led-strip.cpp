@@ -4,7 +4,7 @@ LedStrip::LedStrip(int pin, int numLeds)
 {
   _counter = 0;
   _h = _s = _v = 0;
-  _mode = LEDSTRIP_MODE_SINGLE;
+  _mode = LEDSTRIP_MODE_ALL;
   _strip = new Adafruit_NeoPixel(numLeds, pin, NEO_GRB | NEO_KHZ800);
   _strip->begin();
   _strip->show();
@@ -19,16 +19,29 @@ void LedStrip::tick()
 {
   int r, g, b;
 
-  HSVtoRGB(_h, _s, _v, &r, &g, &b);
-
   switch (_mode) {
     case LEDSTRIP_MODE_ALL:
+      HSVtoRGB(_h, _s, _v, &r, &g, &b);
+
       for (unsigned int i = 0; i < _strip->numPixels(); i++)
         _strip->setPixelColor(i, r, g, b);
 
       break;
 
+    case LEDSTRIP_MODE_CHASING:
+      _counter++;
+      if (_counter > 50) {
+        _position++;
+        if (_position > 20)
+          _position = 0;
+
+        _counter = 0;
+      }
+      // fall through
+
     case LEDSTRIP_MODE_SINGLE:
+      HSVtoRGB(_h, _s, _v, &r, &g, &b);
+
       for (unsigned int i = 0; i < _strip->numPixels(); i++)
         if (i == _position)
           _strip->setPixelColor(i, r, g, b);
@@ -37,15 +50,18 @@ void LedStrip::tick()
 
       break;
 
-    case LEDSTRIP_MODE_CHASING:
-      break;
-
     case LEDSTRIP_MODE_RAINBOW:
-      _counter++;
-      if (_counter < 1000)
-        return;
+      for (unsigned int i = 0; i < _strip->numPixels(); i++) {
+        HSVtoRGB((_h + (i*20)) % 360, _s, _v, &r, &g, &b);
+        _strip->setPixelColor(i, r, g, b);
+      }
 
-      _counter = 0;
+      _counter++;
+      if (_counter > 1) {
+        _counter = 0;
+        _h++;
+        _h %= 360;
+      }
 
       break;
 

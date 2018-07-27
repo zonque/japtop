@@ -7,6 +7,7 @@
 class SoundPlayer {
 public:
   explicit SoundPlayer(int rxPin, int txPin);
+  bool init();
   void play(int id);
 
 private:
