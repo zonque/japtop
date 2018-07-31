@@ -109,7 +109,6 @@ static void rightRotaryEvent(bool cw)
 void setup() {
   ledStrip = new LedStrip(5, 10);
   ledStrip->setPosition(pixelPos);
-  ledStrip->setMode(LedStrip::LEDSTRIP_MODE_CHASING);
   ledStrip->setHSV(LedStrip::LEDSTRIP_HUE_CYAN, 100, 100);
 
   player = new SoundPlayer(8, 7);

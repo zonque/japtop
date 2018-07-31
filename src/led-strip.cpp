@@ -1,10 +1,21 @@
 #include "led-strip.h"
 
+static const struct LedStrip::StartupSequenceStep StartupSequenceSteps[] = {
+  { 1450, 3, LedStrip::LEDSTRIP_HUE_BLUE },
+  { 1700, 4, LedStrip::LEDSTRIP_HUE_RED },
+  { 1950, 5, LedStrip::LEDSTRIP_HUE_GREEN },
+  { 2400, 6, LedStrip::LEDSTRIP_HUE_YELLOW },
+  { 2650, 7, LedStrip::LEDSTRIP_HUE_CYAN },
+  { 6000, 0, LedStrip::LEDSTRIP_HUE_MAGENTA },
+  { -1 }
+};
+
 LedStrip::LedStrip(int pin, int numLeds)
 {
   _counter = 0;
   _h = _s = _v = 0;
-  _mode = LEDSTRIP_MODE_ALL;
+  _mode = LEDSTRIP_MODE_STARTUP;
+  _step = &StartupSequenceSteps[0];
   _strip = new Adafruit_NeoPixel(numLeds, pin, NEO_GRB | NEO_KHZ800);
   _strip->begin();
   _strip->show();
@@ -20,6 +31,20 @@ void LedStrip::tick()
   int r, g, b;
 
   switch (_mode) {
+    case LEDSTRIP_MODE_STARTUP:
+      if (_step->millis < 0) {
+        _mode = LEDSTRIP_MODE_CHASING;
+        break;
+      }
+
+      if (millis() > (unsigned) _step->millis) {
+        HSVtoRGB(_step->hue, 100, 100, &r, &g, &b);
+        _strip->setPixelColor(_step->pixel, r, g, b);
+        _step++;
+      }
+
+      break;
+
     case LEDSTRIP_MODE_ALL:
       HSVtoRGB(_h, _s, _v, &r, &g, &b);
 

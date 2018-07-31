@@ -6,7 +6,14 @@
 class LedStrip {
 public:
 
+  struct StartupSequenceStep {
+    int millis;
+    uint8_t pixel;
+    uint8_t hue;
+  };
+
   enum Mode {
+    LEDSTRIP_MODE_STARTUP,
     LEDSTRIP_MODE_ALL,
     LEDSTRIP_MODE_SINGLE,
     LEDSTRIP_MODE_CHASING,
@@ -41,4 +48,5 @@ private:
   unsigned int _position;
   int _h, _s, _v;
   int _counter;
+  StartupSequenceStep *_step;
 };
