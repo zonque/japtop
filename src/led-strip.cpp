@@ -1,12 +1,24 @@
 #include "led-strip.h"
 
 static const struct LedStrip::StartupSequenceStep StartupSequenceSteps[] = {
-  { 1450, 3, LedStrip::LEDSTRIP_HUE_BLUE },
-  { 1700, 4, LedStrip::LEDSTRIP_HUE_RED },
-  { 1950, 5, LedStrip::LEDSTRIP_HUE_GREEN },
-  { 2400, 6, LedStrip::LEDSTRIP_HUE_YELLOW },
-  { 2650, 7, LedStrip::LEDSTRIP_HUE_CYAN },
+  { 1450, 4, LedStrip::LEDSTRIP_HUE_BLUE },
+  { 1450, 5, LedStrip::LEDSTRIP_HUE_BLUE },
+
+  { 1700, 3, LedStrip::LEDSTRIP_HUE_RED },
+  { 1700, 6, LedStrip::LEDSTRIP_HUE_RED },
+
+  { 1950, 2, LedStrip::LEDSTRIP_HUE_GREEN },
+  { 1950, 7, LedStrip::LEDSTRIP_HUE_GREEN },
+
+  { 2400, 1, LedStrip::LEDSTRIP_HUE_YELLOW },
+  { 2400, 8, LedStrip::LEDSTRIP_HUE_YELLOW },
+
+  { 2650, 0, LedStrip::LEDSTRIP_HUE_CYAN },
+  { 2650, 9, LedStrip::LEDSTRIP_HUE_CYAN },
+
   { 6000, 0, LedStrip::LEDSTRIP_HUE_MAGENTA },
+  { 6000, 0, LedStrip::LEDSTRIP_HUE_MAGENTA },
+
   { -1 }
 };
 
