@@ -18,11 +18,26 @@ AnalogButton *rightRotaryButton;
 
 int pixelPos = 0;
 bool blackButtonPressed = false;
+enum LedStrip::Mode previousLedStripMode;
+
+static void handleLedStripMode(bool pressed)
+{
+  if (pressed) {
+    enum LedStrip::Mode current = ledStrip->mode();
+    if (current != LedStrip::LEDSTRIP_MODE_ALL)
+      previousLedStripMode = current;
+
+    ledStrip->setMode(LedStrip::LEDSTRIP_MODE_ALL);
+  } else {
+    ledStrip->setMode(previousLedStripMode);
+  }
+}
 
 static void blueButtonChanged(bool state)
 {
+  handleLedStripMode(state);
+
   if (state) {
-    ledStrip->setMode(LedStrip::LEDSTRIP_MODE_ALL);
     ledStrip->setHSV(LedStrip::LEDSTRIP_HUE_BLUE, 100, 100);
 
     if (blackButtonPressed)
@@ -32,6 +47,8 @@ static void blueButtonChanged(bool state)
 
 static void redButtonChanged(bool state)
 {
+  handleLedStripMode(state);
+
   if (state) {
     ledStrip->setMode(LedStrip::LEDSTRIP_MODE_ALL);
     ledStrip->setHSV(LedStrip::LEDSTRIP_HUE_RED, 100, 100);
@@ -43,6 +60,8 @@ static void redButtonChanged(bool state)
 
 static void greenButtonChanged(bool state)
 {
+  handleLedStripMode(state);
+
   if (state) {
     ledStrip->setMode(LedStrip::LEDSTRIP_MODE_ALL);
     ledStrip->setHSV(LedStrip::LEDSTRIP_HUE_GREEN, 100, 100);
@@ -54,6 +73,8 @@ static void greenButtonChanged(bool state)
 
 static void yellowButtonChanged(bool state)
 {
+  handleLedStripMode(state);
+
   if (state) {
     ledStrip->setMode(LedStrip::LEDSTRIP_MODE_ALL);
     ledStrip->setHSV(LedStrip::LEDSTRIP_HUE_YELLOW, 100, 100);
@@ -101,9 +122,9 @@ static void leftRotaryEvent(bool cw)
 static void rightRotaryEvent(bool cw)
 {
   if (cw)
-    ledStrip->increaseHue(1);
+    ledStrip->increaseHue(10);
   else
-    ledStrip->increaseHue(-1);
+    ledStrip->increaseHue(-10);
 }
 
 void setup() {

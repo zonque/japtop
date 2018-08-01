@@ -37,7 +37,8 @@ public:
   void tick();
   void setHSV(int h, int v, int s);
   void increaseHue(int delta);
-  void setMode(LedStrip::Mode mode);
+  Mode mode() { return _mode; }
+  void setMode(Mode mode);
   void setPosition(unsigned int position);
 
 private:
