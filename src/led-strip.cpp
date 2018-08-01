@@ -27,7 +27,9 @@ LedStrip::LedStrip(int pin, int numLeds)
   _counter = 0;
   _h = _s = _v = 0;
   _mode = LEDSTRIP_MODE_STARTUP;
+  _direction = true;
   _step = &StartupSequenceSteps[0];
+  _active_mask = malloc(numLeds * sizeof(bool));
   _strip = new Adafruit_NeoPixel(numLeds, pin, NEO_GRB | NEO_KHZ800);
   _strip->begin();
   _strip->show();
@@ -36,6 +38,12 @@ LedStrip::LedStrip(int pin, int numLeds)
 int LedStrip::numPixels()
 {
   return _strip->numPixels();
+}
+
+void LedStrip::setRandomMask()
+{
+  for (unsigned int i = 0; i < _strip->numPixels(); i++)
+    _active_mask[i] = random() & 1;
 }
 
 void LedStrip::tick()
@@ -65,12 +73,29 @@ void LedStrip::tick()
 
       break;
 
+    case LEDSTRIP_MODE_MASKED:
+      HSVtoRGB(_h, _s, _v, &r, &g, &b);
+
+      for (unsigned int i = 0; i < _strip->numPixels(); i++)
+        if (_active_mask[i])
+          _strip->setPixelColor(i, r, g, b);
+        else
+        _strip->setPixelColor(i, 0, 0, 0);
+
+      break;
+
     case LEDSTRIP_MODE_CHASING:
       _counter++;
       if (_counter > 50) {
-        _position++;
-        if (_position > 20)
-          _position = 0;
+        if (_direction) {
+          _position++;
+          if (_position > 20)
+            _position = 0;
+        } else {
+          _position--;
+          if (_position < 0)
+            _position = 20;
+        }
 
         _counter = 0;
       }
@@ -130,6 +155,11 @@ void LedStrip::setMode(LedStrip::Mode mode)
 void LedStrip::setPosition(unsigned int position)
 {
   _position = position;
+}
+
+void LedStrip::reverseDirection()
+{
+  _direction ^= 1;
 }
 
 // Taken from https://gist.github.com/hdznrrd/656996

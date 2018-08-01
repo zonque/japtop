@@ -15,6 +15,7 @@ public:
   enum Mode {
     LEDSTRIP_MODE_STARTUP,
     LEDSTRIP_MODE_ALL,
+    LEDSTRIP_MODE_MASKED,
     LEDSTRIP_MODE_SINGLE,
     LEDSTRIP_MODE_CHASING,
     LEDSTRIP_MODE_RAINBOW,
@@ -25,7 +26,7 @@ public:
 
   enum Hue {
     LEDSTRIP_HUE_RED = 0,
-    LEDSTRIP_HUE_YELLOW = 40,
+    LEDSTRIP_HUE_YELLOW = 30,
     LEDSTRIP_HUE_GREEN = 120,
     LEDSTRIP_HUE_CYAN = 180,
     LEDSTRIP_HUE_BLUE = 240,
@@ -40,14 +41,18 @@ public:
   Mode mode() { return _mode; }
   void setMode(Mode mode);
   void setPosition(unsigned int position);
+  void reverseDirection();
+  void setRandomMask();
 
 private:
   void HSVtoRGB(float h, float s, float v, int *r, int *g, int *b);
 
   Adafruit_NeoPixel *_strip;
   Mode _mode;
-  unsigned int _position;
+  int _position;
   int _h, _s, _v;
   int _counter;
+  bool *_active_mask;
+  bool _direction;
   StartupSequenceStep *_step;
 };

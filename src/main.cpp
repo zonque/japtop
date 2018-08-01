@@ -24,10 +24,12 @@ static void handleLedStripMode(bool pressed)
 {
   if (pressed) {
     enum LedStrip::Mode current = ledStrip->mode();
-    if (current != LedStrip::LEDSTRIP_MODE_ALL)
+    if (current != LedStrip::LEDSTRIP_MODE_MASKED) {
       previousLedStripMode = current;
+    }
 
-    ledStrip->setMode(LedStrip::LEDSTRIP_MODE_ALL);
+    ledStrip->setRandomMask();
+    ledStrip->setMode(LedStrip::LEDSTRIP_MODE_MASKED);
   } else {
     ledStrip->setMode(previousLedStripMode);
   }
@@ -50,7 +52,6 @@ static void redButtonChanged(bool state)
   handleLedStripMode(state);
 
   if (state) {
-    ledStrip->setMode(LedStrip::LEDSTRIP_MODE_ALL);
     ledStrip->setHSV(LedStrip::LEDSTRIP_HUE_RED, 100, 100);
 
     if (blackButtonPressed)
@@ -63,7 +64,6 @@ static void greenButtonChanged(bool state)
   handleLedStripMode(state);
 
   if (state) {
-    ledStrip->setMode(LedStrip::LEDSTRIP_MODE_ALL);
     ledStrip->setHSV(LedStrip::LEDSTRIP_HUE_GREEN, 100, 100);
 
     if (blackButtonPressed)
@@ -76,7 +76,6 @@ static void yellowButtonChanged(bool state)
   handleLedStripMode(state);
 
   if (state) {
-    ledStrip->setMode(LedStrip::LEDSTRIP_MODE_ALL);
     ledStrip->setHSV(LedStrip::LEDSTRIP_HUE_YELLOW, 100, 100);
 
     if (blackButtonPressed)
@@ -86,7 +85,13 @@ static void yellowButtonChanged(bool state)
 
 static void blackButtonChanged(bool state)
 {
-  ledStrip->setMode(LedStrip::LEDSTRIP_MODE_CHASING);
+  if (state) {
+    if (ledStrip->mode() == LedStrip::LEDSTRIP_MODE_CHASING)
+      ledStrip->reverseDirection();
+    else
+      ledStrip->setMode(LedStrip::LEDSTRIP_MODE_CHASING);
+  }
+
   blackButtonPressed = state;
 }
 
