@@ -3,22 +3,20 @@
 #include <Arduino.h>
 #include <Adafruit_NeoPixel.h>
 
+#include "sound-player.h"
 class LedStrip {
 public:
 
   struct StartupSequenceStep {
     int millis;
     uint8_t pixel;
-    uint8_t hue;
+    unsigned int hue;
   };
 
   enum Mode {
     LEDSTRIP_MODE_STARTUP,
-    LEDSTRIP_MODE_ALL,
-    LEDSTRIP_MODE_MASKED,
-    LEDSTRIP_MODE_SINGLE,
-    LEDSTRIP_MODE_CHASING,
-    LEDSTRIP_MODE_RAINBOW,
+    LEDSTRIP_MODE_GAME,
+    LEDSTRIP_MODE_DIGITS,
     LEDSTRIP_MODE_MAX
   };
 
@@ -33,26 +31,53 @@ public:
     LEDSTRIP_HUE_MAGENTA = 300,
   };
 
-  explicit LedStrip(int pin, int numLeds);
+  enum BlockColor {
+    BLOCKCOLOR_BLUE = 0,
+    BLOCKCOLOR_RED,
+    BLOCKCOLOR_GREEN,
+    BLOCKCOLOR_YELLOW,
+    _BLOCKCOLOR_MAX
+  };
+
+  enum Direction {
+    DIR_LEFT_TO_RIGHT,
+    DIR_RIGHT_TO_LEFT,
+  };
+
+  explicit LedStrip(int pin, int numLeds, SoundPlayer *soundPlayer);
+  void reportButtonState(BlockColor, bool);
   int numPixels();
   void tick();
-  void setHSV(int h, int v, int s);
-  void increaseHue(int delta);
-  Mode mode() { return _mode; }
-  void setMode(Mode mode);
-  void setPosition(unsigned int position);
-  void reverseDirection();
-  void setRandomMask();
+  void reset();
+
+  void digitUp();
+  void digitDown();
 
 private:
   void HSVtoRGB(float h, float s, float v, int *r, int *g, int *b);
+  void newBlock();
+  void reverseDirection();
 
-  Adafruit_NeoPixel *_strip;
-  Mode _mode;
-  int _position;
-  int _h, _s, _v;
-  int _counter;
-  bool *_active_mask;
-  bool _direction;
-  StartupSequenceStep *_step;
+  SoundPlayer *soundPlayer;
+
+  Adafruit_NeoPixel *strip;
+  Mode mode;
+  bool buttonState[_BLOCKCOLOR_MAX];
+  int buttonCounter;
+
+  int playerPosition;
+  int playerBrightness;
+  bool playerBrightnessUp;
+
+  int blockPosition;
+  BlockColor blockColor;
+  int blockCounter;
+  Direction direction;
+  int speed;
+
+  // digits mode
+  unsigned int digits;
+  int digitsModeTimeout;
+
+  StartupSequenceStep *startupStep;
 };

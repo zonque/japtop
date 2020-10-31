@@ -4,7 +4,7 @@
 #include "rotary-encoder.h"
 #include "sound-player.h"
 
-SoundPlayer *player;
+SoundPlayer *soundPlayer;
 LedStrip *ledStrip;
 RotaryEncoder *leftRotary;
 RotaryEncoder *rightRotary;
@@ -17,133 +17,56 @@ AnalogButton *leftRotaryButton;
 AnalogButton *rightRotaryButton;
 
 int pixelPos = 0;
-bool blackButtonPressed = false;
 enum LedStrip::Mode previousLedStripMode;
 
-static void handleLedStripMode(bool pressed)
-{
-  if (pressed) {
-    enum LedStrip::Mode current = ledStrip->mode();
-    if (current != LedStrip::LEDSTRIP_MODE_MASKED) {
-      previousLedStripMode = current;
-    }
-
-    ledStrip->setRandomMask();
-    ledStrip->setMode(LedStrip::LEDSTRIP_MODE_MASKED);
-  } else {
-    ledStrip->setMode(previousLedStripMode);
-  }
+static void blueButtonChanged(bool state) {
+  ledStrip->reportButtonState(LedStrip::BLOCKCOLOR_BLUE, state);
 }
 
-static void blueButtonChanged(bool state)
-{
-  handleLedStripMode(state);
+static void redButtonChanged(bool state) {
+  ledStrip->reportButtonState(LedStrip::BLOCKCOLOR_RED, state);
+}
 
+static void greenButtonChanged(bool state) {
+  ledStrip->reportButtonState(LedStrip::BLOCKCOLOR_GREEN, state);
+}
+
+static void yellowButtonChanged(bool state) {
+  ledStrip->reportButtonState(LedStrip::BLOCKCOLOR_YELLOW, state);
+}
+
+static void blackButtonChanged(bool state) {
   if (state) {
-    ledStrip->setHSV(LedStrip::LEDSTRIP_HUE_BLUE, 100, 100);
-
-    if (blackButtonPressed)
-      player->play(3);
+    ledStrip->reset();
+    soundPlayer->play(2, 4);
   }
 }
 
-static void redButtonChanged(bool state)
-{
-  handleLedStripMode(state);
-
-  if (state) {
-    ledStrip->setHSV(LedStrip::LEDSTRIP_HUE_RED, 100, 100);
-
-    if (blackButtonPressed)
-      player->play(2);
-  }
+static void leftRotaryButtonChanged(bool state) {
 }
 
-static void greenButtonChanged(bool state)
-{
-  handleLedStripMode(state);
-
-  if (state) {
-    ledStrip->setHSV(LedStrip::LEDSTRIP_HUE_GREEN, 100, 100);
-
-    if (blackButtonPressed)
-      player->play(4);
-  }
+static void rightRotaryButtonChanged(bool state) {
 }
 
-static void yellowButtonChanged(bool state)
-{
-  handleLedStripMode(state);
-
-  if (state) {
-    ledStrip->setHSV(LedStrip::LEDSTRIP_HUE_YELLOW, 100, 100);
-
-    if (blackButtonPressed)
-      player->play(6);
-  }
-}
-
-static void blackButtonChanged(bool state)
-{
-  if (state) {
-    if (ledStrip->mode() == LedStrip::LEDSTRIP_MODE_CHASING)
-      ledStrip->reverseDirection();
-    else
-      ledStrip->setMode(LedStrip::LEDSTRIP_MODE_CHASING);
-  }
-
-  blackButtonPressed = state;
-}
-
-static void leftRotaryButtonChanged(bool state)
-{
-  if (state)
-    ledStrip->setMode(LedStrip::LEDSTRIP_MODE_RAINBOW);
-}
-
-static void rightRotaryButtonChanged(bool state)
-{
-  if (state)
-    ledStrip->setHSV(LedStrip::LEDSTRIP_HUE_MAGENTA, 100, 100);
-}
-
-static void leftRotaryEvent(bool cw)
-{
+static void leftRotaryEvent(bool cw) {
   if (cw)
-    pixelPos++;
+    ledStrip->digitUp();
   else
-    pixelPos--;
-
-  if (pixelPos >= ledStrip->numPixels())
-    pixelPos = ledStrip->numPixels() - 1;
-
-  if (pixelPos < 0)
-    pixelPos = 0;
-
-  ledStrip->setMode(LedStrip::LEDSTRIP_MODE_SINGLE);
-  ledStrip->setPosition(pixelPos);
+    ledStrip->digitDown();
 }
 
-static void rightRotaryEvent(bool cw)
-{
-  if (cw)
-    ledStrip->increaseHue(10);
-  else
-    ledStrip->increaseHue(-10);
+static void rightRotaryEvent(bool cw) {
 }
 
 void setup() {
-  ledStrip = new LedStrip(5, 10);
-  ledStrip->setPosition(pixelPos);
-  ledStrip->setHSV(LedStrip::LEDSTRIP_HUE_CYAN, 100, 100);
+  randomSeed(analogRead(0));
 
-  player = new SoundPlayer(8, 7);
-  if (!player->init()) {
-    ledStrip->setMode(LedStrip::LEDSTRIP_MODE_ALL);
-    ledStrip->setHSV(LedStrip::LEDSTRIP_HUE_RED, 100, 100);
-  }
+  soundPlayer = new SoundPlayer(8, 7);
+  soundPlayer->init();
 
-  player->play(1);
+  ledStrip = new LedStrip(5, 10, soundPlayer);
+
+  soundPlayer->play(2, 1);
 
   leftRotary = new RotaryEncoder(11, 12, leftRotaryEvent);
   rightRotary = new RotaryEncoder(9, 10, rightRotaryEvent);
@@ -154,6 +77,8 @@ void setup() {
   blackButton = new AnalogButton(A4, blackButtonChanged);
   leftRotaryButton = new AnalogButton(A5, leftRotaryButtonChanged);
   rightRotaryButton = new AnalogButton(A6, rightRotaryButtonChanged);
+
+  Serial.begin(115200);
 }
 
 void loop() {

@@ -8,7 +8,7 @@ class SoundPlayer {
 public:
   explicit SoundPlayer(int rxPin, int txPin);
   bool init();
-  void play(int id);
+  void play(int folder, int file);
 
 private:
   SoftwareSerial *_serial;

@@ -1,13 +1,12 @@
 #include "rotary-encoder.h"
 
-RotaryEncoder::RotaryEncoder(int pinA, int pinB, RotaryEncoderCallback cb)
-{
+RotaryEncoder::RotaryEncoder(int pinA, int pinB, RotaryEncoderCallback cb) {
   _r = new Rotary(pinA, pinB);
+  _r->begin(true);
   _cb = cb;
 }
 
-void RotaryEncoder::tick()
-{
+void RotaryEncoder::tick() {
   unsigned char result = _r->process();
 
   switch (result) {

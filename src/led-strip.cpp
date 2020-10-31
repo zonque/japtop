@@ -1,6 +1,6 @@
 #include "led-strip.h"
 
-static const struct LedStrip::StartupSequenceStep StartupSequenceSteps[] = {
+static struct LedStrip::StartupSequenceStep StartupSequenceSteps[] = {
   { 1450, 4, LedStrip::LEDSTRIP_HUE_BLUE },
   { 1450, 5, LedStrip::LEDSTRIP_HUE_BLUE },
 
@@ -22,144 +22,213 @@ static const struct LedStrip::StartupSequenceStep StartupSequenceSteps[] = {
   { -1 }
 };
 
-LedStrip::LedStrip(int pin, int numLeds)
-{
-  _counter = 0;
-  _h = _s = _v = 0;
-  _mode = LEDSTRIP_MODE_STARTUP;
-  _direction = true;
-  _step = &StartupSequenceSteps[0];
-  _active_mask = malloc(numLeds * sizeof(bool));
-  _strip = new Adafruit_NeoPixel(numLeds, pin, NEO_GRB | NEO_KHZ800);
-  _strip->begin();
-  _strip->show();
+LedStrip::LedStrip(int pin, int numLeds, SoundPlayer *sp) {
+  soundPlayer = sp;
+  mode = LEDSTRIP_MODE_STARTUP;
+
+  buttonState[BLOCKCOLOR_BLUE] = false;
+  buttonState[BLOCKCOLOR_RED] = false;
+  buttonState[BLOCKCOLOR_GREEN] = false;
+  buttonState[BLOCKCOLOR_YELLOW] = false;
+  buttonCounter = 0;
+
+  digits = 0;
+
+  startupStep = &StartupSequenceSteps[0];
+  strip = new Adafruit_NeoPixel(numLeds, pin, NEO_GRB | NEO_KHZ800);
+  strip->begin();
+  strip->show();
+
+  reset();
 }
 
-int LedStrip::numPixels()
-{
-  return _strip->numPixels();
+int LedStrip::numPixels() {
+  return strip->numPixels();
 }
 
-void LedStrip::setRandomMask()
-{
-  for (unsigned int i = 0; i < _strip->numPixels(); i++)
-    _active_mask[i] = random() & 1;
+void LedStrip::reset() {
+  direction = DIR_RIGHT_TO_LEFT;
+  speed = 300;
+
+  playerPosition = 0;
+  playerBrightness = 0;
+  playerBrightnessUp = true;
+
+  newBlock();
 }
 
-void LedStrip::tick()
-{
+void LedStrip::reportButtonState(BlockColor color, bool state) {
+  buttonState[color] = state;
+
+  if (state)
+    buttonCounter++;
+  else
+    buttonCounter--;
+}
+
+void LedStrip::newBlock() {
+  if (direction == DIR_LEFT_TO_RIGHT)
+    blockPosition = 0;
+  else
+    blockPosition = numPixels() - 1;
+
+  blockColor = (BlockColor) random(_BLOCKCOLOR_MAX);
+  blockCounter = speed;
+}
+
+void LedStrip::reverseDirection() {
+  if (direction == DIR_LEFT_TO_RIGHT)
+    direction = DIR_RIGHT_TO_LEFT;
+  else
+    direction = DIR_LEFT_TO_RIGHT;
+
+  soundPlayer->play(2, 4);
+}
+
+void LedStrip::digitUp() {
+  mode = LEDSTRIP_MODE_DIGITS;
+  digitsModeTimeout = 1000;
+
+  if (digits < numPixels()) {
+    digits++;
+    soundPlayer->play(10, digits);
+  }
+}
+
+void LedStrip::digitDown() {
+  mode = LEDSTRIP_MODE_DIGITS;
+  digitsModeTimeout = 1000;
+
+  if (digits > 1) {
+    digits--;
+    soundPlayer->play(10, digits);
+  }
+}
+
+void LedStrip::tick() {
   int r, g, b;
 
-  switch (_mode) {
+  switch (mode) {
     case LEDSTRIP_MODE_STARTUP:
-      if (_step->millis < 0) {
-        _mode = LEDSTRIP_MODE_CHASING;
+      if (startupStep->millis < 0) {
+        mode = LEDSTRIP_MODE_GAME;
         break;
       }
 
-      if (millis() > (unsigned) _step->millis) {
-        HSVtoRGB(_step->hue, 100, 100, &r, &g, &b);
-        _strip->setPixelColor(_step->pixel, r, g, b);
-        _step++;
+      if (millis() > (unsigned) startupStep->millis) {
+        HSVtoRGB(startupStep->hue, 100, 100, &r, &g, &b);
+        strip->setPixelColor(startupStep->pixel, r, g, b);
+        startupStep++;
       }
 
       break;
 
-    case LEDSTRIP_MODE_ALL:
-      HSVtoRGB(_h, _s, _v, &r, &g, &b);
+    case LEDSTRIP_MODE_GAME:
+      for (unsigned int i = 0; i < strip->numPixels(); i++)
+        strip->setPixelColor(i, 0, 0, 0);
 
-      for (unsigned int i = 0; i < _strip->numPixels(); i++)
-        _strip->setPixelColor(i, r, g, b);
+      int blockR, blockG, blockB;
+      float blockHue;
 
-      break;
+      switch (blockColor) {
+        case BLOCKCOLOR_BLUE:
+          blockHue = LEDSTRIP_HUE_BLUE;
+          break;
+        case BLOCKCOLOR_RED:
+          blockHue = LEDSTRIP_HUE_RED;
+          break;
+        case BLOCKCOLOR_GREEN:
+          blockHue = LEDSTRIP_HUE_GREEN;
+          break;
+        case BLOCKCOLOR_YELLOW:
+          blockHue = LEDSTRIP_HUE_YELLOW;
+          break;
+        case _BLOCKCOLOR_MAX:
+          break;
+      }
 
-    case LEDSTRIP_MODE_MASKED:
-      HSVtoRGB(_h, _s, _v, &r, &g, &b);
+      if (blockCounter-- == 0) {
+        blockCounter = speed;
 
-      for (unsigned int i = 0; i < _strip->numPixels(); i++)
-        if (_active_mask[i])
-          _strip->setPixelColor(i, r, g, b);
-        else
-        _strip->setPixelColor(i, 0, 0, 0);
+        switch (direction) {
+        case DIR_LEFT_TO_RIGHT:
+          if (blockPosition + 1 == playerPosition) {
+            if (buttonState[blockColor] && buttonCounter == 1) {
+              playerPosition--;
+              soundPlayer->play(2, 2);
+              speed--;
+              if (playerPosition == 0)
+                reverseDirection();
 
-      break;
+              newBlock();
+            } else if (playerPosition < numPixels()-1) {
+              playerPosition++;
+              blockPosition++;
+              soundPlayer->play(2, 3);
+            }
+          } else {
+            blockPosition++;
+          }
+          break;
 
-    case LEDSTRIP_MODE_CHASING:
-      _counter++;
-      if (_counter > 50) {
-        if (_direction) {
-          _position++;
-          if (_position > 20)
-            _position = 0;
-        } else {
-          _position--;
-          if (_position < 0)
-            _position = 20;
+        case DIR_RIGHT_TO_LEFT:
+          if (blockPosition - 1 == playerPosition) {
+            if (buttonState[blockColor] && buttonCounter == 1) {
+              playerPosition++;
+              soundPlayer->play(2, 2);
+              speed--;
+              if (playerPosition == numPixels() - 1)
+                reverseDirection();
+
+              newBlock();
+            } else if (playerPosition > 0) {
+              playerPosition--;
+              blockPosition--;
+              soundPlayer->play(2, 3);
+            }
+          } else {
+            blockPosition--;
+          }
+          break;
         }
-
-        _counter = 0;
       }
-      // fall through
 
-    case LEDSTRIP_MODE_SINGLE:
-      HSVtoRGB(_h, _s, _v, &r, &g, &b);
+      HSVtoRGB(blockHue, 100, 100, &blockR, &blockG, &blockB);
+      strip->setPixelColor(blockPosition, blockR, blockG, blockB);
 
-      for (unsigned int i = 0; i < _strip->numPixels(); i++)
-        if (i == _position)
-          _strip->setPixelColor(i, r, g, b);
+      if (playerBrightnessUp) {
+        if (playerBrightness == 255)
+          playerBrightnessUp = false;
         else
-          _strip->setPixelColor(i, 0, 0, 0);
-
-      break;
-
-    case LEDSTRIP_MODE_RAINBOW:
-      for (unsigned int i = 0; i < _strip->numPixels(); i++) {
-        HSVtoRGB((_h + (i*20)) % 360, _s, _v, &r, &g, &b);
-        _strip->setPixelColor(i, r, g, b);
+          playerBrightness++;
+      } else {
+        if (playerBrightness == 0)
+          playerBrightnessUp = true;
+        else
+          playerBrightness--;
       }
 
-      _counter++;
-      if (_counter > 1) {
-        _counter = 0;
-        _h++;
-        _h %= 360;
+      strip->setPixelColor(playerPosition, playerBrightness, playerBrightness, playerBrightness);
+      break;
+
+    case LEDSTRIP_MODE_DIGITS:
+      for (unsigned int i = 0; i < strip->numPixels(); i++) {
+        if (i < digits)
+          strip->setPixelColor(i, 0, 255, 255);
+        else
+          strip->setPixelColor(i, 0, 0, 0);
       }
 
-      break;
+      if (digitsModeTimeout-- == 0) {
+        mode = LEDSTRIP_MODE_GAME;
+        reset();
+      }
 
     default:
       break;
   }
 
-  _strip->show();
-}
-
-void LedStrip::setHSV(int h, int s, int v)
-{
-  _h = h;
-  _s = s;
-  _v = v;
-}
-
-void LedStrip::increaseHue(int delta)
-{
-  _h += 360 + delta;
-  _h %= 360;
-}
-
-void LedStrip::setMode(LedStrip::Mode mode)
-{
-  _mode = mode;
-}
-
-void LedStrip::setPosition(unsigned int position)
-{
-  _position = position;
-}
-
-void LedStrip::reverseDirection()
-{
-  _direction ^= 1;
+  strip->show();
 }
 
 // Taken from https://gist.github.com/hdznrrd/656996
